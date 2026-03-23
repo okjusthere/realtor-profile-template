@@ -1,7 +1,7 @@
 import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
-import { chatSessions, chatMessages, leads, agentUsage } from "../drizzle/schema";
-import { getDb } from "./db";
+import { chatSessions, chatMessages, leads, agentUsage, type AgentProfile } from "../drizzle/schema";
+import { getDb, getAgentBySlug } from "./db";
 import { invokeLLM, type Tool, type Message } from "./_core/llm";
 import { nanoid } from "nanoid";
 import { eq, asc, and, sql } from "drizzle-orm";
@@ -13,53 +13,25 @@ import { searchProperties, formatListingsForAI, type PropertySearchParams } from
 const FREE_TIER_MONTHLY_LIMIT = 20;
 const MAX_HISTORY_MESSAGES = 20;
 
-// ─── Agent Profile Type ─────────────────────────────────────────
-type AgentProfile = {
-  name: string;
-  title: string;
-  brokerage: string;
-  phone: string;
-  email: string;
-  serviceAreas: string[];
-  specialties: string[];
-  languages: string[];
-  yearsExperience: number;
-  awards: string[];
-  recentTransactions: Array<{ address: string; city: string; price: string; type: string }>;
-  neighborhoodKnowledge: Record<string, string>;
-};
+// ─── Agent Profile Loader (from DB) ──────────────────────────────
 
-// ─── Agent Profiles (in production → DB) ────────────────────────
-const AGENT_PROFILES: Record<string, AgentProfile> = {
-  jane: {
-    name: "Jane Smith",
-    title: "Licensed Real Estate Agent",
-    brokerage: "Kevv Realty",
-    phone: "415.555.0123",
-    email: "jane@kevvrealty.com",
-    serviceAreas: ["San Francisco", "Bay Area", "Silicon Valley", "Palo Alto", "San Mateo", "Noe Valley", "Pacific Heights", "SOMA"],
-    specialties: ["Residential Sales", "Investment Properties", "First-time Buyers", "Luxury Homes", "Property Staging", "Relocation"],
-    languages: ["English", "Spanish"],
-    yearsExperience: 10,
-    awards: ["Top Producer (2018-2025)", "Platinum Circle Award (2023, 2024)", "Gold Award (2020, 2022)", "Bay Area Top 100 Agents"],
-    recentTransactions: [
-      { address: "742 Evergreen Terrace", city: "San Francisco, CA 94110", price: "$1,850,000", type: "Buyer & Seller" },
-      { address: "1200 Pacific Heights Blvd", city: "San Francisco, CA 94115", price: "$2,350,000", type: "Seller" },
-      { address: "88 Sunset Drive", city: "Palo Alto, CA 94301", price: "$3,200,000", type: "Buyer" },
-      { address: "456 Marina Blvd #12A", city: "San Francisco, CA 94123", price: "$1,450,000", type: "Buyer" },
-      { address: "2100 Noe Valley Way", city: "San Francisco, CA 94114", price: "$1,675,000", type: "Buyer & Seller" },
-    ],
-    neighborhoodKnowledge: {
-      "Pacific Heights": "One of SF's most prestigious neighborhoods. Stunning Victorian and Edwardian architecture, Golden Gate Bridge views. Median home price ~$3.5M. Excellent walkability, close to Fillmore Street shops and restaurants.",
-      "Noe Valley": "Family-friendly neighborhood with a village feel. Tree-lined streets, sunny microclimate. Median home price ~$2.2M. Known for 24th Street boutiques, farmers markets, and excellent schools.",
-      "SOMA": "Vibrant, urban neighborhood popular with tech professionals. Mix of lofts, condos, and new developments. Median condo price ~$1.1M. Close to AT&T Park, Yerba Buena Gardens, and major tech offices.",
-      "Marina District": "Scenic waterfront neighborhood. Mediterranean-style homes and condos. Median price ~$2M. Popular for its proximity to the Presidio, Palace of Fine Arts, and Marina Green.",
-      "Mission District": "Culturally rich neighborhood with vibrant street art, restaurants, and nightlife. Mix of Victorian homes and modern condos. Median price ~$1.6M. Sunny microclimate.",
-      "Palo Alto": "Heart of Silicon Valley. Top-rated schools, tree-lined streets, university town atmosphere. Median home price ~$3.8M. Minutes from Stanford University and major tech campuses.",
-      "San Mateo": "Suburban feel with urban amenities. Good schools, diverse dining, convenient Peninsula location. Median home price ~$1.8M. Easy access to both SF and Silicon Valley via Caltrain.",
-    },
-  },
-};
+// Cache agent profiles for short periods to avoid repeated DB hits
+const profileCache = new Map<string, { profile: AgentProfile; ts: number }>();
+const CACHE_TTL = 60_000; // 1 minute
+
+async function loadAgentProfile(slug: string): Promise<AgentProfile | null> {
+  // Check cache
+  const cached = profileCache.get(slug);
+  if (cached && Date.now() - cached.ts < CACHE_TTL) {
+    return cached.profile;
+  }
+
+  const profile = await getAgentBySlug(slug);
+  if (profile) {
+    profileCache.set(slug, { profile, ts: Date.now() });
+  }
+  return profile ?? null;
+}
 
 // ─── Language Detection ─────────────────────────────────────────
 
@@ -135,17 +107,17 @@ const EXTRACT_LEAD_TOOL: Tool = {
 // ─── System Prompt Builder ──────────────────────────────────────
 
 function buildAgentSystemPrompt(
-  agentSlug: string,
+  agent: AgentProfile,
   userMessage?: string,
   language: "en" | "zh" = "en"
 ): string {
-  const agent = AGENT_PROFILES[agentSlug] || AGENT_PROFILES.jane;
 
   // RAG: inject matching neighborhood data
   let neighborhoodCtx = "";
+  const neighborhoods = (agent.neighborhoodKnowledge ?? {}) as Record<string, string>;
   if (userMessage) {
     const msgLower = userMessage.toLowerCase();
-    const matches = Object.entries(agent.neighborhoodKnowledge)
+    const matches = Object.entries(neighborhoods)
       .filter(([name]) => msgLower.includes(name.toLowerCase()))
       .map(([name, info]) => `### ${name}\n${info}`);
     if (matches.length > 0) {
@@ -153,7 +125,8 @@ function buildAgentSystemPrompt(
     }
   }
 
-  const txCtx = agent.recentTransactions
+  const transactions = (agent.transactions ?? []) as Array<{ address: string; city: string; price: string; type: string }>;
+  const txCtx = transactions
     .map((t) => `  - ${t.address}, ${t.city} — ${t.price} (${t.type})`)
     .join("\n");
 
@@ -172,18 +145,18 @@ function buildAgentSystemPrompt(
 Help website visitors with real estate questions. Demonstrate deep local expertise. Your PRIMARY GOAL is to qualify leads and collect their contact information through natural conversation.
 
 ## Agent Profile
-- **Name**: ${agent.name} | **Title**: ${agent.title} | **Brokerage**: ${agent.brokerage}
-- **Experience**: ${agent.yearsExperience}+ years | **Contact**: ${agent.phone} | ${agent.email}
-- **Service Areas**: ${agent.serviceAreas.join(", ")}
-- **Specialties**: ${agent.specialties.join(", ")}
-- **Languages**: ${agent.languages.join(", ")}
-- **Awards**: ${agent.awards.join(", ")}
+- **Name**: ${agent.name} | **Title**: ${agent.title ?? "Licensed Real Estate Agent"} | **Brokerage**: ${agent.brokerage ?? ""}
+- **Experience**: ${agent.yearsExperience ?? 0}+ years | **Contact**: ${agent.phone ?? ""} | ${agent.email}
+- **Service Areas**: ${((agent.serviceAreas ?? []) as string[]).join(", ")}
+- **Specialties**: ${((agent.specialties ?? []) as string[]).join(", ")}
+- **Languages**: ${((agent.languages ?? ["English"]) as string[]).join(", ")}
+- **Awards**: ${((agent.awards ?? []) as string[]).join(", ")}
 
 ## Recent Transactions
 ${txCtx}
 
 ## Known Neighborhoods
-${Object.keys(agent.neighborhoodKnowledge).join(", ")}
+${Object.keys(neighborhoods).join(", ")}
 ${neighborhoodCtx}
 
 ## Tools
@@ -417,7 +390,18 @@ export const chatRouter = router({
       }
 
       // ── Build messages with tools ────────────────────────
-      const systemPrompt = buildAgentSystemPrompt(input.agentSlug, input.message, sessionLanguage);
+      // Load agent profile from DB
+      const agent = await loadAgentProfile(input.agentSlug);
+      if (!agent) {
+        return {
+          sessionId: currentSessionId,
+          response: "Sorry, this agent page is not available. Please check the URL and try again.",
+          messageCount: 0,
+          leadScore: null,
+        };
+      }
+
+      const systemPrompt = buildAgentSystemPrompt(agent, input.message, sessionLanguage);
       const recentHistory = conversationHistory
         .filter((m) => m.role !== "system")
         .slice(-MAX_HISTORY_MESSAGES);
@@ -442,7 +426,7 @@ export const chatRouter = router({
       }
 
       // ── Call LLM with tools ──────────────────────────────
-      const agent = AGENT_PROFILES[input.agentSlug] || AGENT_PROFILES.jane;
+      // agent already loaded above
       let aiResponse = "";
       let leadExtraction: LeadExtraction | null = null;
 
@@ -592,7 +576,7 @@ export const leadRouter = router({
     )
     .mutation(async ({ input }) => {
       const db = await getDb();
-      const agent = AGENT_PROFILES[input.agentSlug] || AGENT_PROFILES.jane;
+      const agent = await loadAgentProfile(input.agentSlug);
 
       // Get conversation history for summary
       let conversationHistory: Array<{ role: string; content: string }> = [];
@@ -710,10 +694,10 @@ ${conversationHistory.map((m) => `${m.role === "user" ? "Visitor" : "AI"}: ${m.c
           input.email,
           input.phone || null,
           conversationSummary,
-          agent.name
+          agent?.name ?? input.agentSlug
         );
         await sendEmail({
-          to: agent.email,
+          to: agent?.email ?? "",
           subject: `${scoreEmoji} New ${leadScore.toUpperCase()} AI Chat Lead: ${input.name}`,
           html: notificationHtml,
         });
