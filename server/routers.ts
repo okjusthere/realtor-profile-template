@@ -1,25 +1,15 @@
-import { COOKIE_NAME } from "@shared/const";
-import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { contactMessages } from "../drizzle/schema";
 import { getDb } from "./db";
 import { sendEmail, generateContactNotificationEmail, generateConfirmationEmail } from "./_core/emailService";
+import { chatRouter, leadRouter } from "./chatRouter";
 
 export const appRouter = router({
-    // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
-  auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
-    logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
-      return {
-        success: true,
-      } as const;
-    }),
-  }),
+  chat: chatRouter,
+  lead: leadRouter,
 
   contact: router({
     submit: publicProcedure
@@ -56,9 +46,9 @@ export const appRouter = router({
             console.warn("[Contact] Database not available, skipping DB save");
           }
 
-          // Contact form always routes to Heidi (single-agent profile)
-          const targetMemberEmail = "heidi@homixny.com";
-          const targetMemberName = "Heidi";
+          // Contact form routes to agent (single-agent profile)
+          const targetMemberEmail = "jane@kevvrealty.com";
+          const targetMemberName = "Jane";
 
           // Send notification email to team member
           const notificationHtml = generateContactNotificationEmail(
@@ -80,7 +70,7 @@ export const appRouter = router({
           const confirmationHtml = generateConfirmationEmail(input.senderName, targetMemberName);
           const confirmationSent = await sendEmail({
             to: input.senderEmail,
-            subject: "We've Received Your Message - Homix Realty",
+            subject: "We've Received Your Message - Kevv Realty",
             html: confirmationHtml,
           });
 
