@@ -15,7 +15,7 @@ describe("Contact Form Submission", () => {
     senderName: "Test User",
     senderEmail: "test@example.com",
     senderPhone: "555-1234",
-    targetMember: "heidi",
+    agentSlug: "sarah-chen",
     subject: "Test Inquiry",
     message: "This is a test message",
   };
@@ -33,7 +33,7 @@ describe("Contact Form Submission", () => {
     const invalidData = {
       senderName: "",
       senderEmail: "test@example.com",
-      targetMember: "heidi",
+      agentSlug: "sarah-chen",
       subject: "Test",
       message: "Test",
     };
@@ -50,7 +50,7 @@ describe("Contact Form Submission", () => {
     const invalidData = {
       senderName: "Test User",
       senderEmail: "invalid-email",
-      targetMember: "heidi",
+      agentSlug: "sarah-chen",
       subject: "Test",
       message: "Test",
     };
@@ -85,8 +85,8 @@ describe("Contact Form Submission", () => {
 
     expect(messages.length).toBeGreaterThan(0);
     expect(messages[0].senderName).toBe(testData.senderName);
-    expect(messages[0].targetMember).toBe(testData.targetMember);
-    expect(messages[0].isRead).toBe(0);
+    expect(messages[0].agentSlug).toBe(testData.agentSlug);
+    expect(messages[0].isRead).toBe(false);
 
     messageId = messages[0].id;
   });
@@ -95,7 +95,7 @@ describe("Contact Form Submission", () => {
     const dataWithoutPhone = {
       senderName: "Test User",
       senderEmail: "no-phone@example.com",
-      targetMember: "heidi",
+      agentSlug: "sarah-chen",
       subject: "Test",
       message: "Test",
     };
