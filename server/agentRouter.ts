@@ -62,6 +62,7 @@ const updateProfileSchema = z.object({
       rating: z.number(),
     })).optional(),
     neighborhoodKnowledge: z.record(z.string(), z.string()).optional(),
+    templateId: z.string().optional(),
     visibilitySettings: z.object({
       showPhone: z.boolean(),
       showEmail: z.boolean(),

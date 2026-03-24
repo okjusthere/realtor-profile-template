@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { CheckCircle2, Loader2, X, Upload, Image } from "lucide-react";
 import { SPECIALTY_OPTIONS, LANGUAGE_OPTIONS } from "../registration/useRegistration";
+import { TEMPLATES } from "../agent-page/AgentPage";
 
 export default function ProfileEditor({ agentSlug }: { agentSlug: string }) {
   const { data: profile, isLoading } = trpc.agent.getBySlug.useQuery({ slug: agentSlug });
@@ -33,6 +34,7 @@ export default function ProfileEditor({ agentSlug }: { agentSlug: string }) {
     bio: "",
     photoUrl: "",
     colorScheme: "",
+    templateId: "luxury",
   });
 
   const [saved, setSaved] = useState(false);
@@ -56,6 +58,7 @@ export default function ProfileEditor({ agentSlug }: { agentSlug: string }) {
         bio: (profile.bio as string) || "",
         photoUrl: (profile.photoUrl as string) || "",
         colorScheme: (profile.colorScheme as string) || "gold",
+        templateId: (profile.templateId as string) || "luxury",
       });
     }
   }, [profile]);
@@ -76,6 +79,7 @@ export default function ProfileEditor({ agentSlug }: { agentSlug: string }) {
         bio: form.bio || undefined,
         photoUrl: form.photoUrl || undefined,
         colorScheme: form.colorScheme || undefined,
+        templateId: form.templateId || undefined,
       },
     });
   };
@@ -153,6 +157,38 @@ export default function ProfileEditor({ agentSlug }: { agentSlug: string }) {
           )}
         </Button>
       </div>
+
+      {/* Template Selector */}
+      <section className="space-y-4">
+        <h2 className="text-lg font-bold border-b pb-2">Page Template</h2>
+        <p className="text-sm text-muted-foreground">Choose a design style for your agent page</p>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {TEMPLATES.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setForm({ ...form, templateId: t.id })}
+              className={`relative p-4 rounded-xl border-2 text-left transition-all hover:shadow-md ${
+                form.templateId === t.id
+                  ? "border-primary bg-primary/5 shadow-sm"
+                  : "border-border hover:border-primary/30"
+              }`}
+            >
+              <span className="text-2xl block mb-2">{t.preview}</span>
+              <p className="font-bold text-sm">{t.name}</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-tight">{t.description}</p>
+              {form.templateId === t.id && (
+                <div className="absolute top-2 right-2">
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Preview: <a href={`/agent/${agentSlug}`} target="_blank" className="text-primary hover:underline">Open your page →</a>
+        </p>
+      </section>
 
       {/* Photo Upload */}
       <section className="space-y-4">

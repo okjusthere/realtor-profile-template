@@ -12,6 +12,10 @@ import AgentTestimonials, { type Testimonial } from "./AgentTestimonials";
 import AgentContact from "./AgentContact";
 import ModernTemplate from "./templates/ModernTemplate";
 import ClassicTemplate from "./templates/ClassicTemplate";
+import BoldTemplate from "./templates/BoldTemplate";
+import ElegantTemplate from "./templates/ElegantTemplate";
+import MinimalTemplate from "./templates/MinimalTemplate";
+import UrbanTemplate from "./templates/UrbanTemplate";
 
 // ─── Public Agent Profile type (from tRPC response) ──────────────
 export type AgentProfileData = {
@@ -40,9 +44,13 @@ export type AgentProfileData = {
 
 // ─── Template registry ───────────────────────────────────────────
 export const TEMPLATES = [
-  { id: "luxury",  name: "Luxury",  description: "Dark, editorial split-panel with full-bleed photo" },
-  { id: "modern",  name: "Modern",  description: "Bright, full-width hero with card-based layout" },
-  { id: "classic", name: "Classic", description: "Traditional top-down with centered portrait & warm tones" },
+  { id: "luxury",  name: "Luxury",   description: "Dark editorial, split-panel with full-bleed photo", preview: "🖤" },
+  { id: "modern",  name: "Modern",   description: "Bright full-width hero, card-based layout", preview: "💙" },
+  { id: "classic", name: "Classic",  description: "Traditional centered portrait, warm tones", preview: "🤎" },
+  { id: "bold",    name: "Bold",     description: "Gradient hero, big type, motion-forward", preview: "💜" },
+  { id: "elegant", name: "Elegant",  description: "Glassmorphism, soft gradients, frosted cards", preview: "🩷" },
+  { id: "minimal", name: "Minimal",  description: "Editorial whitespace, magazine-style photography", preview: "🤍" },
+  { id: "urban",   name: "Urban",    description: "Dark mode, neon accents, cyberpunk energy", preview: "🩵" },
 ] as const;
 
 type AgentPageProps = {
@@ -123,12 +131,12 @@ export default function AgentPage({
   const templateId = agent.templateId || "luxury";
   const templateProps = { profile: agent, slug: agentSlug, showChat, showContact, preview };
 
-  if (templateId === "modern") {
-    return <ModernTemplate {...templateProps} />;
-  }
-  if (templateId === "classic") {
-    return <ClassicTemplate {...templateProps} />;
-  }
+  if (templateId === "modern")  return <ModernTemplate {...templateProps} />;
+  if (templateId === "classic") return <ClassicTemplate {...templateProps} />;
+  if (templateId === "bold")    return <BoldTemplate {...templateProps} />;
+  if (templateId === "elegant") return <ElegantTemplate {...templateProps} />;
+  if (templateId === "minimal") return <MinimalTemplate {...templateProps} />;
+  if (templateId === "urban")   return <UrbanTemplate {...templateProps} />;
 
   // ── Default: Luxury Template (original dark editorial layout) ──
   const serviceAreas = (agent.serviceAreas ?? []) as string[];
