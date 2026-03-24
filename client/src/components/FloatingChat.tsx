@@ -356,7 +356,7 @@ export default function FloatingChat({
           <button
             onClick={openChat}
             className="group relative"
-            aria-label="Chat with AI Assistant"
+            aria-label="Chat with agent"
           >
             {/* Persistent gentle pulse */}
             <span className="absolute inset-0 rounded-full bg-primary/20 animate-ping" style={{ animationDuration: "3s" }} />
@@ -386,11 +386,11 @@ export default function FloatingChat({
               </div>
               <div>
                 <p className="text-sm font-bold tracking-wide">
-                  {agentName}'s AI Assistant
+                  Chat with {agentName}
                 </p>
                 <p className="text-[11px] opacity-80 flex items-center gap-1">
                   <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-400" />
-                  {detectedLang === "zh" ? "在线 · 由 Kevv AI 驱动" : "Online · Powered by Kevv AI"}
+                  {detectedLang === "zh" ? "在线 · 随时为您服务" : "Online · Ready to help"}
                 </p>
               </div>
             </div>
@@ -414,8 +414,8 @@ export default function FloatingChat({
                     <div className="text-center">
                       <p className="text-sm font-semibold text-foreground">
                         {detectedLang === "zh"
-                          ? `你好！我是 ${agentName} 的 AI 助手`
-                          : `Hi! I'm ${agentName}'s AI assistant`}
+                          ? `你好！我是 ${agentName}，有什么可以帮您的？`
+                          : `Hi! I'm ${agentName}. How can I help you?`}
                       </p>
                       <p className="text-xs mt-1">
                         {detectedLang === "zh"
