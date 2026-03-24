@@ -119,7 +119,7 @@ export default function LoginPage() {
             {/* Header */}
             <div className="text-center space-y-3 border-b border-border/60 pb-6">
               <div className="text-2xl font-bold tracking-tight" style={{ fontFamily: '"Playfair Display", "Georgia", serif' }}>
-                KEVV REALTY
+                KEVV AI
               </div>
               <h2
                 className="text-3xl tracking-tight font-semibold"
@@ -220,8 +220,8 @@ export default function LoginPage() {
 
           {/* Domain info (small text) */}
           <p className="mt-4 text-center text-xs text-muted-foreground/50">
-            Agent pages: <code className="text-muted-foreground">agents.kevvrealty.com</code> ·
-            Dashboard: <code className="text-muted-foreground">app.kevvrealty.com</code>
+            Agent pages: <code className="text-muted-foreground">pages.kevv.ai/agents/xxx</code> ·
+            Dashboard: <code className="text-muted-foreground">page.kevv.ai</code>
           </p>
         </div>
       </div>

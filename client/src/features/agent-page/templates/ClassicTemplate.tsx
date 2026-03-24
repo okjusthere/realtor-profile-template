@@ -42,7 +42,7 @@ export default function ClassicTemplate({
       <header className="bg-stone-900 text-white py-3">
         <div className="max-w-6xl mx-auto px-6 flex justify-between items-center">
           <span className="text-sm tracking-widest uppercase font-sans">
-            {agent.brokerage || "Kevv Realty"}
+            {agent.brokerage || "Kevv AI"}
           </span>
           <div className="hidden md:flex items-center gap-6 text-xs tracking-wider uppercase font-sans">
             <a href="#about" className="hover:text-amber-400 transition-colors">About</a>

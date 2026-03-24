@@ -175,7 +175,7 @@ export default function AgentPage({
           <div className="w-full px-4 flex justify-between items-center gap-3">
             <a href="#" className="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0">
               <span className="font-heading font-bold text-xs tracking-widest whitespace-nowrap">
-                {(agent.brokerage || "KEVV REALTY").toUpperCase()}
+                {(agent.brokerage || "KEVV AI").toUpperCase()}
               </span>
             </a>
 

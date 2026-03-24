@@ -142,8 +142,8 @@ describe("Email Service", () => {
       );
       const html2 = generateConfirmationEmail("Test", "Jane");
 
-      expect(html1).toContain("Kevv Realty");
-      expect(html2).toContain("Kevv Realty");
+      expect(html1).toContain("Kevv AI");
+      expect(html2).toContain("Kevv AI");
     });
   });
 });

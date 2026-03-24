@@ -10,9 +10,9 @@ export const DEMO_AGENTS: AgentProfileData[] = [
     slug: "sarah-chen",
     name: "Sarah Chen",
     title: "Luxury Property Specialist",
-    brokerage: "Kevv Realty",
+    brokerage: "Kevv AI",
     phone: "(415) 555-0188",
-    email: "sarah@kevvrealty.com",
+    email: "sarah@kevv.ai",
     licenseState: "CA",
     serviceAreas: ["San Francisco", "Palo Alto", "Menlo Park", "Atherton"],
     specialties: [

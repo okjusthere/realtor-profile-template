@@ -62,7 +62,7 @@ export default function StepBasicInfo({ data, updateData }: Props) {
           <Input
             value={data.brokerage}
             onChange={(e) => updateData({ brokerage: e.target.value })}
-            placeholder="Kevv Realty"
+            placeholder="Kevv AI"
           />
         </div>
         <div>

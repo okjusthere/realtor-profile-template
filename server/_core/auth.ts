@@ -10,8 +10,8 @@ import { agentProfiles } from "../../drizzle/schema";
 
 // ─── Domain configuration ───────────────────────────────────────────
 // These will be separate domains in production:
-//   AGENT_DOMAIN  = where public agent pages are served (e.g. agents.kevvrealty.com)
-//   DASHBOARD_URL = where agents manage their profile (e.g. app.kevvrealty.com)
+//   AGENT_DOMAIN  = where public agent pages are served (e.g. pages.kevv.ai)
+//   DASHBOARD_URL = where agents manage their profile (e.g. page.kevv.ai)
 export function getAgentDomain(): string {
   return process.env.AGENT_DOMAIN || process.env.APP_URL || "http://localhost:3000";
 }
