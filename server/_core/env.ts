@@ -30,4 +30,15 @@ export const ENV = {
 
   // Google Maps (optional, for future use)
   googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY ?? "",
+
+  // R2 / S3 Storage — for photo uploads
+  r2AccountId: process.env.R2_ACCOUNT_ID ?? "",
+  r2AccessKeyId: process.env.R2_ACCESS_KEY_ID ?? "",
+  r2SecretAccessKey: process.env.R2_SECRET_ACCESS_KEY ?? "",
+  r2BucketName: process.env.R2_BUCKET_NAME ?? "kevv-pages",
+  r2PublicUrl: process.env.R2_PUBLIC_URL ?? "", // e.g. https://cdn.kevv.ai
+
+  get r2Configured(): boolean {
+    return !!this.r2AccountId && !!this.r2AccessKeyId && !!this.r2SecretAccessKey;
+  },
 };

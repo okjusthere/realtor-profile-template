@@ -1,9 +1,9 @@
 import { trpc } from "@/lib/trpc";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, Loader2, X } from "lucide-react";
+import { CheckCircle2, Loader2, X, Upload, Image } from "lucide-react";
 import { SPECIALTY_OPTIONS, LANGUAGE_OPTIONS } from "../registration/useRegistration";
 
 export default function ProfileEditor({ agentSlug }: { agentSlug: string }) {
@@ -17,6 +17,8 @@ export default function ProfileEditor({ agentSlug }: { agentSlug: string }) {
       setTimeout(() => setSaved(false), 3000);
     },
   });
+
+  const uploadMutation = trpc.agent.getUploadUrl.useMutation();
 
   const [form, setForm] = useState({
     name: "",
@@ -35,6 +37,8 @@ export default function ProfileEditor({ agentSlug }: { agentSlug: string }) {
 
   const [saved, setSaved] = useState(false);
   const [areaInput, setAreaInput] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Populate form from profile
   useEffect(() => {
@@ -76,6 +80,41 @@ export default function ProfileEditor({ agentSlug }: { agentSlug: string }) {
     });
   };
 
+  const handlePhotoUpload = async (file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    setUploading(true);
+
+    try {
+      // Get presigned URL from server
+      const result = await uploadMutation.mutateAsync({
+        agentSlug,
+        filename: file.name,
+        contentType: file.type,
+      });
+
+      if (!result.success) {
+        // R2 not configured — show URL input instead
+        console.warn("[Upload]", result.error);
+        setUploading(false);
+        return;
+      }
+
+      // Upload directly to R2
+      await fetch(result.uploadUrl, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type },
+      });
+
+      // Update form with public URL
+      setForm(prev => ({ ...prev, photoUrl: result.publicUrl }));
+      setUploading(false);
+    } catch (e) {
+      console.error("[Upload] Failed:", e);
+      setUploading(false);
+    }
+  };
+
   if (isLoading) {
     return <div className="p-8 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></div>;
   }
@@ -114,6 +153,70 @@ export default function ProfileEditor({ agentSlug }: { agentSlug: string }) {
           )}
         </Button>
       </div>
+
+      {/* Photo Upload */}
+      <section className="space-y-4">
+        <h2 className="text-lg font-bold border-b pb-2">Profile Photo</h2>
+        <div className="flex items-start gap-6">
+          {/* Preview */}
+          <div className="flex-shrink-0">
+            {form.photoUrl ? (
+              <img
+                src={form.photoUrl}
+                alt="Profile"
+                className="w-24 h-24 rounded-full object-cover border-2 border-primary/30"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-muted flex items-center justify-center">
+                <Image className="h-8 w-8 text-muted-foreground" />
+              </div>
+            )}
+          </div>
+
+          {/* Upload area */}
+          <div className="flex-1 space-y-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handlePhotoUpload(file);
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="w-full border-2 border-dashed border-border hover:border-primary/50 rounded-lg p-4 text-center transition-colors cursor-pointer"
+            >
+              {uploading ? (
+                <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm">Uploading...</span>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                  <Upload className="h-4 w-4" />
+                  <span className="text-sm">Click to upload photo</span>
+                </div>
+              )}
+            </button>
+
+            {/* Or paste URL */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">or paste URL:</span>
+              <Input
+                value={form.photoUrl}
+                onChange={(e) => setForm({ ...form, photoUrl: e.target.value })}
+                placeholder="https://..."
+                className="text-xs h-8"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Basic Info */}
       <section className="space-y-4">
@@ -196,3 +299,4 @@ export default function ProfileEditor({ agentSlug }: { agentSlug: string }) {
     </div>
   );
 }
+

@@ -2,9 +2,11 @@ import { z } from "zod";
 import { publicProcedure, router } from "./_core/trpc";
 import { getDb, getAgentBySlug, getAgentByEmail, createAgentProfile, updateAgentProfile, isSlugAvailable } from "./db";
 import { generateSlug } from "./_core/auth";
-import { agentProfiles, leads, chatSessions, agentUsage, type AgentProfile } from "../drizzle/schema";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { agentProfiles, leads, chatSessions, agentUsage, pageViews, type AgentProfile } from "../drizzle/schema";
+import { eq, and, desc, sql, gte } from "drizzle-orm";
 import { getDemoAgent, DEMO_LEADS, DEMO_ANALYTICS } from "../client/src/data/demoAgents";
+import { getPresignedUploadUrl, generatePhotoKey } from "./_core/storage";
+import { createHash } from "crypto";
 
 // ─── Input Schemas ──────────────────────────────────────────────────
 
@@ -262,6 +264,40 @@ export const dashboardRouter = router({
     }),
 
   /**
+   * Track a page view — called from client when agent page loads.
+   */
+  trackPageView: publicProcedure
+    .input(z.object({
+      agentSlug: z.string(),
+      referrer: z.string().optional(),
+      utmSource: z.string().optional(),
+      utmMedium: z.string().optional(),
+      utmCampaign: z.string().optional(),
+      device: z.enum(["mobile", "tablet", "desktop"]).optional(),
+      visitorId: z.string().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      const db = await getDb();
+      if (!db) return { success: true }; // demo mode — skip
+
+      try {
+        await db.insert(pageViews).values({
+          agentSlug: input.agentSlug,
+          visitorId: input.visitorId || null,
+          referrer: input.referrer || null,
+          utmSource: input.utmSource || null,
+          utmMedium: input.utmMedium || null,
+          utmCampaign: input.utmCampaign || null,
+          device: input.device || null,
+        });
+      } catch (e) {
+        console.warn("[Analytics] Failed to track page view:", e);
+      }
+
+      return { success: true };
+    }),
+
+  /**
    * Get analytics overview for an agent.
    */
   getAnalytics: publicProcedure
@@ -272,9 +308,13 @@ export const dashboardRouter = router({
         // Return demo analytics for demo agents
         const demo = getDemoAgent(input.agentSlug);
         if (demo) return DEMO_ANALYTICS;
-        return { totalLeads: 0, totalConversations: 0, conversionRate: 0 };
+        return { totalLeads: 0, totalConversations: 0, conversionRate: 0, totalPageViews: 0, dailyViews: [], topReferrers: [], deviceBreakdown: [] };
       }
 
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      // Core counts
       const [leadResult] = await db.select({ count: sql<number>`count(*)` })
         .from(leads)
         .where(eq(leads.agentSlug, input.agentSlug));
@@ -290,6 +330,50 @@ export const dashboardRouter = router({
           eq(leads.status, "converted"),
         ));
 
+      // Page views — total
+      const [pvResult] = await db.select({ count: sql<number>`count(*)` })
+        .from(pageViews)
+        .where(eq(pageViews.agentSlug, input.agentSlug));
+
+      // Page views — daily (last 30 days)
+      const dailyViews = await db.select({
+        date: sql<string>`to_char(${pageViews.viewedAt}, 'YYYY-MM-DD')`,
+        count: sql<number>`count(*)`,
+      })
+        .from(pageViews)
+        .where(and(
+          eq(pageViews.agentSlug, input.agentSlug),
+          gte(pageViews.viewedAt, thirtyDaysAgo),
+        ))
+        .groupBy(sql`to_char(${pageViews.viewedAt}, 'YYYY-MM-DD')`)
+        .orderBy(sql`to_char(${pageViews.viewedAt}, 'YYYY-MM-DD')`);
+
+      // Top referrers
+      const topReferrers = await db.select({
+        referrer: pageViews.referrer,
+        count: sql<number>`count(*)`,
+      })
+        .from(pageViews)
+        .where(and(
+          eq(pageViews.agentSlug, input.agentSlug),
+          sql`${pageViews.referrer} IS NOT NULL AND ${pageViews.referrer} != ''`,
+        ))
+        .groupBy(pageViews.referrer)
+        .orderBy(sql`count(*) DESC`)
+        .limit(10);
+
+      // Device breakdown
+      const deviceBreakdown = await db.select({
+        device: pageViews.device,
+        count: sql<number>`count(*)`,
+      })
+        .from(pageViews)
+        .where(and(
+          eq(pageViews.agentSlug, input.agentSlug),
+          sql`${pageViews.device} IS NOT NULL`,
+        ))
+        .groupBy(pageViews.device);
+
       const totalLeads = Number(leadResult?.count ?? 0);
       const totalConversations = Number(sessionResult?.count ?? 0);
       const converted = Number(convertedResult?.count ?? 0);
@@ -298,6 +382,42 @@ export const dashboardRouter = router({
         totalLeads,
         totalConversations,
         conversionRate: totalLeads > 0 ? Math.round((converted / totalLeads) * 100) : 0,
+        totalPageViews: Number(pvResult?.count ?? 0),
+        dailyViews: dailyViews.map(d => ({ date: String(d.date), count: Number(d.count) })),
+        topReferrers: topReferrers.map(r => ({ referrer: String(r.referrer ?? "Direct"), count: Number(r.count) })),
+        deviceBreakdown: deviceBreakdown.map(d => ({ device: String(d.device ?? "unknown"), count: Number(d.count) })),
+      };
+    }),
+
+  /**
+   * Get a presigned URL for uploading a photo to R2.
+   */
+  getUploadUrl: publicProcedure
+    .input(z.object({
+      agentSlug: z.string(),
+      filename: z.string(),
+      contentType: z.string().refine(ct => ct.startsWith("image/"), {
+        message: "Only image files are allowed",
+      }),
+    }))
+    .mutation(async ({ input }) => {
+      const key = generatePhotoKey(input.agentSlug, input.filename);
+      const result = await getPresignedUploadUrl(key, input.contentType);
+
+      if (!result) {
+        return {
+          success: false as const,
+          error: "Storage not configured. Set R2 environment variables.",
+          uploadUrl: "",
+          publicUrl: "",
+        };
+      }
+
+      return {
+        success: true as const,
+        uploadUrl: result.uploadUrl,
+        publicUrl: result.publicUrl,
       };
     }),
 });
+

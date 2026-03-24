@@ -185,3 +185,24 @@ export const agentUsage = pgTable("agent_usage", {
 
 export type AgentUsage = typeof agentUsage.$inferSelect;
 export type InsertAgentUsage = typeof agentUsage.$inferInsert;
+
+// ─── Page Views (Analytics) ─────────────────────────────────────────
+
+export const pageViews = pgTable("page_views", {
+  id: serial("id").primaryKey(),
+  agentSlug: varchar("agent_slug", { length: 64 }).notNull(),
+  // Visitor fingerprint (hashed IP + UA for unique visitors without cookies)
+  visitorId: varchar("visitor_id", { length: 64 }),
+  // Traffic source tracking
+  referrer: varchar("referrer", { length: 512 }),
+  utmSource: varchar("utm_source", { length: 128 }),
+  utmMedium: varchar("utm_medium", { length: 128 }),
+  utmCampaign: varchar("utm_campaign", { length: 128 }),
+  // Device info
+  device: varchar("device", { length: 20 }), // "mobile" | "tablet" | "desktop"
+  // Timestamps
+  viewedAt: timestamp("viewed_at").defaultNow().notNull(),
+});
+
+export type PageView = typeof pageViews.$inferSelect;
+export type InsertPageView = typeof pageViews.$inferInsert;
