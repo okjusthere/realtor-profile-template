@@ -1,6 +1,7 @@
 import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import { chatSessions, chatMessages, leads, agentUsage, type AgentProfile } from "../drizzle/schema";
+import { ENV } from "./_core/env";
 import { getDb, getAgentBySlug } from "./db";
 import { invokeLLM, type Tool, type Message } from "./_core/llm";
 import { nanoid } from "nanoid";
@@ -108,6 +109,74 @@ const EXTRACT_LEAD_TOOL: Tool = {
   },
 };
 
+const SEARCH_WEB_TOOL: Tool = {
+  type: "function",
+  function: {
+    name: "search_web",
+    description: "Search the web for real-time real estate data: local market trends, school ratings, neighborhood info, recent news, local amenities, commute times. Use when the visitor asks about current market conditions, local area info, or anything the agent profile data doesn't cover.",
+    parameters: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description: "Search query. Be specific and include the city/area, e.g. 'San Francisco median home price 2026' or 'best schools in Palo Alto'",
+        },
+      },
+      required: ["query"],
+    },
+  },
+};
+
+/**
+ * Call Tavily Search API for real-time web results.
+ * Returns a formatted string for the LLM to use.
+ */
+async function searchWeb(query: string): Promise<string> {
+  if (!ENV.tavilyApiKey) {
+    return "Web search is not configured. Answer based on your knowledge.";
+  }
+
+  try {
+    const res = await fetch("https://api.tavily.com/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        api_key: ENV.tavilyApiKey,
+        query,
+        search_depth: "basic",
+        max_results: 5,
+        include_answer: true,
+        include_raw_content: false,
+      }),
+    });
+
+    if (!res.ok) {
+      console.warn(`[Tavily] API error: ${res.status}`);
+      return "Web search temporarily unavailable.";
+    }
+
+    const data = await res.json() as {
+      answer?: string;
+      results?: Array<{ title: string; url: string; content: string }>;
+    };
+
+    let output = "";
+    if (data.answer) {
+      output += `Summary: ${data.answer}\n\n`;
+    }
+    if (data.results?.length) {
+      output += "Sources:\n";
+      for (const r of data.results.slice(0, 3)) {
+        output += `- ${r.title}: ${r.content.slice(0, 200)}\n`;
+      }
+    }
+    return output || "No relevant results found.";
+  } catch (e) {
+    console.warn("[Tavily] Search failed:", e);
+    return "Web search temporarily unavailable.";
+  }
+}
+
 // ─── System Prompt Builder ──────────────────────────────────────
 
 function buildAgentSystemPrompt(
@@ -167,6 +236,7 @@ ${neighborhoodCtx}
 You have access to tools:
 1. **search_properties** — Search real property listings. Use when visitors ask about specific properties or available homes.
 2. **extract_lead_info** — Extract lead qualification data. Call this PROACTIVELY whenever you learn the visitor's intent, budget, area preference, or timeline. You don't need to tell the visitor you're doing this.
+3. **search_web** — Search the web for real-time data: market trends, school ratings, neighborhood info, local news, amenities. Use this to provide up-to-date, factual answers.
 
 ## Lead Capture Conversation Flow (CRITICAL)
 Follow this natural progression to qualify leads:
@@ -437,7 +507,7 @@ export const chatRouter = router({
       try {
         const result = await invokeLLM({
           messages,
-          tools: [PROPERTY_SEARCH_TOOL, EXTRACT_LEAD_TOOL],
+          tools: [PROPERTY_SEARCH_TOOL, EXTRACT_LEAD_TOOL, SEARCH_WEB_TOOL],
           toolChoice: "auto",
           maxTokens: 2048,
         });
@@ -478,6 +548,15 @@ export const chatRouter = router({
                 toolMessages.push({
                   role: "tool",
                   content: "Lead information recorded successfully. Continue the conversation naturally.",
+                  tool_call_id: tc.id,
+                });
+              }
+
+              if (tc.function.name === "search_web") {
+                const searchResult = await searchWeb(args.query || "");
+                toolMessages.push({
+                  role: "tool",
+                  content: searchResult,
                   tool_call_id: tc.id,
                 });
               }

@@ -31,6 +31,9 @@ export const ENV = {
   // Google Maps (optional, for future use)
   googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY ?? "",
 
+  // Tavily Search — real-time web search for AI chat
+  tavilyApiKey: process.env.TAVILY_API_KEY ?? "",
+
   // R2 / S3 Storage — for photo uploads
   r2AccountId: process.env.R2_ACCOUNT_ID ?? "",
   r2AccessKeyId: process.env.R2_ACCESS_KEY_ID ?? "",
