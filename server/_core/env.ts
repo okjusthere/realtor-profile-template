@@ -23,7 +23,7 @@ export const ENV = {
 
   // Email — Resend (https://resend.com) or any SMTP-compatible service
   resendApiKey: process.env.RESEND_API_KEY ?? "",
-  emailFrom: process.env.EMAIL_FROM ?? "Kevv Realty <noreply@kevvrealty.com>",
+  emailFrom: process.env.EMAIL_FROM ?? "Kevv AI Inc. <noreply@kevv.ai>",
 
   // Notification — agent's email for lead alerts
   agentNotificationEmail: process.env.AGENT_NOTIFICATION_EMAIL ?? "",

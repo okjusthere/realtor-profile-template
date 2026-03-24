@@ -89,7 +89,7 @@ export function generateContactNotificationEmail(
       </div>
 
       <div style="background-color: #f0f0f0; padding: 15px; border-radius: 8px; text-align: center; color: #666; font-size: 12px;">
-        <p style="margin: 0;">This message is for ${escapeHtml(targetMemberName)} from Kevv Realty.</p>
+        <p style="margin: 0;">This message is for ${escapeHtml(targetMemberName)} from Kevv AI Inc.</p>
       </div>
     </div>
   `;
@@ -114,7 +114,7 @@ export function generateConfirmationEmail(
       </div>
 
       <div style="background-color: #f0f0f0; padding: 15px; border-radius: 8px; text-align: center; color: #666; font-size: 12px;">
-        <p style="margin: 0;">© 2026 Kevv Realty. All rights reserved.</p>
+        <p style="margin: 0;">© 2026 Kevv AI Inc. All rights reserved.</p>
       </div>
     </div>
   `;
@@ -146,7 +146,7 @@ export function generateLeadNotificationEmail(
       </div>
 
       <div style="background-color: #f0f0f0; padding: 15px; border-radius: 8px; text-align: center; color: #666; font-size: 12px;">
-        <p style="margin: 0;">This lead was captured by Kevv AI for ${escapeHtml(targetMemberName)} | Kevv Realty.</p>
+        <p style="margin: 0;">This lead was captured for ${escapeHtml(targetMemberName)} | Kevv AI Inc.</p>
       </div>
     </div>
   `;
@@ -193,7 +193,7 @@ export function generateLeadFollowUpEmail(
         <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #DAA520;">
           <p style="font-size: 14px; color: #666; margin: 0 0 8px; font-weight: bold;">From our conversation:</p>
           <p style="font-size: 14px; color: #555; margin: 0; line-height: 1.5;">
-            ${escapeHtml(conversationSummary).slice(0, 300)}${conversationSummary.length > 300 ? "…" : ""}
+            ${escapeHtml(conversationSummary).slice(0, 150)}${conversationSummary.length > 150 ? "…" : ""}
           </p>
         </div>
 

@@ -219,7 +219,7 @@ export default function AgentPage({
           {/* Footer */}
           <footer className="text-center text-xs text-muted-foreground/40 uppercase tracking-widest pb-8">
             <p>
-              © {new Date().getFullYear()} {agent.brokerage || "Kevv Realty"}. All Rights
+              © {new Date().getFullYear()} {agent.brokerage || "Kevv AI Inc."}. All Rights
               Reserved.
             </p>
             <div className="flex justify-center gap-4 mt-4">

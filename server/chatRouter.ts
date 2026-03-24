@@ -712,7 +712,7 @@ ${conversationHistory.map((m) => `${m.role === "user" ? "Visitor" : "AI"}: ${m.c
             input.name,
             agent.name,
             (agent as any).title || "Real Estate Agent",
-            (agent as any).brokerage || "Kevv Realty",
+            (agent as any).brokerage || "Kevv AI Inc.",
             (agent as any).phone || null,
             (agent as any).photoUrl || null,
             conversationSummary
