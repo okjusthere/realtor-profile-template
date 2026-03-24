@@ -53,11 +53,17 @@ export default function AgentProfileRoute() {
   // Fallback to demo data if tRPC returns null/undefined (e.g. no DB)
   const resolvedAgent = agent ?? getDemoAgent(slug) ?? null;
 
+  // Allow ?template=xxx URL override for previewing templates
+  const templateOverride = new URLSearchParams(window.location.search).get("template");
+  const profileWithTemplate = resolvedAgent && templateOverride
+    ? { ...resolvedAgent, templateId: templateOverride }
+    : resolvedAgent;
+
   return (
     <AgentPage
-      profile={resolvedAgent}
+      profile={profileWithTemplate}
       isLoading={isLoading}
-      error={resolvedAgent ? null : (error as Error | null) ?? null}
+      error={profileWithTemplate ? null : (error as Error | null) ?? null}
       slug={slug}
     />
   );
