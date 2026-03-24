@@ -1,24 +1,25 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
-import type { User } from "../../drizzle/schema";
+import type { AgentProfile } from "../../drizzle/schema";
+import { getAuthUser, type AuthUser } from "./auth";
 
 export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
   res: CreateExpressContextOptions["res"];
-  user: User | null;
+  user: AuthUser | null;
 };
 
 /**
  * Create tRPC context for each request.
+ * Reads JWT from cookie to populate ctx.user.
  * Auth is optional — public-facing agent pages don't require login.
- * When agent login is added later, authenticate here.
  */
 export async function createContext(
   opts: CreateExpressContextOptions
 ): Promise<TrpcContext> {
-  // No auth for now — all procedures are public
+  const user = await getAuthUser(opts.req);
   return {
     req: opts.req,
     res: opts.res,
-    user: null,
+    user,
   };
 }

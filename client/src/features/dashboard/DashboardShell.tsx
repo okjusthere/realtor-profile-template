@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation, Route, Switch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { BarChart3, ExternalLink, LayoutDashboard, LogOut, PanelLeft, Sparkles, User, Users } from "lucide-react";
+import { useAuth } from "../../hooks/useAuth";
 import DashboardPage from "./DashboardPage";
 import LeadsPage from "./LeadsPage";
 import ProfileEditor from "./ProfileEditor";
@@ -17,27 +18,47 @@ const DEMO_SLUGS = ["sarah-chen", "michael-brooks"];
 export default function DashboardShell() {
   const [location, navigate] = useLocation();
   const [collapsed, setCollapsed] = useState(false);
+  const { user, isLoading, isAuthenticated, logout } = useAuth();
 
-  // Synchronous init — no useEffect flash
-  const [agentSlug, setAgentSlug] = useState<string | null>(
+  // Sync slug: use auth user's slug, or fallback to localStorage demo
+  const [demoSlug, setDemoSlug] = useState<string | null>(
     () => localStorage.getItem("kevv-agent-slug")
   );
 
+  // Determine which agent slug to use
+  const agentSlug = user?.slug || demoSlug;
   const isDemo = agentSlug ? DEMO_SLUGS.includes(agentSlug) : false;
 
-  // No agent slug — show selector
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin h-8 w-8 rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  // No agent slug — show selector (can come from auth OR demo)
   if (!agentSlug) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-8 bg-background text-foreground p-8">
         <div className="text-center space-y-3">
           <h1 className="text-3xl font-heading font-bold">Agent Dashboard</h1>
           <p className="text-muted-foreground max-w-md">
-            Create your own agent page or explore the demo dashboard to see how the platform works.
+            {isAuthenticated
+              ? "Welcome back! Your agent profile is being set up."
+              : "Sign in with Google to manage your agent page, or try the demo."}
           </p>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4">
-          <Button onClick={() => navigate("/register")} size="lg" className="font-bold gap-2">
+          {!isAuthenticated && (
+            <Button onClick={() => navigate("/login")} size="lg" className="font-bold gap-2">
+              <Sparkles className="h-4 w-4" />
+              Sign In
+            </Button>
+          )}
+          <Button onClick={() => navigate("/register")} size="lg" variant={isAuthenticated ? "default" : "outline"} className="font-bold gap-2">
             <Sparkles className="h-4 w-4" />
             Create Agent Page
           </Button>
@@ -47,7 +68,7 @@ export default function DashboardShell() {
             className="font-bold gap-2"
             onClick={() => {
               localStorage.setItem("kevv-agent-slug", "sarah-chen");
-              setAgentSlug("sarah-chen");
+              setDemoSlug("sarah-chen");
             }}
           >
             <BarChart3 className="h-4 w-4" />
@@ -72,11 +93,24 @@ export default function DashboardShell() {
           )}
         </div>
 
-        {/* Demo Banner */}
-        {isDemo && !collapsed && (
-          <div className="mx-2 mt-2 px-3 py-2 bg-primary/10 border border-primary/20 rounded-lg">
-            <p className="text-xs font-medium text-primary">Demo Mode</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">Viewing sample data</p>
+        {/* Auth User Banner or Demo Banner */}
+        {!collapsed && (
+          <div className={`mx-2 mt-2 px-3 py-2 border rounded-lg ${
+            isDemo
+              ? "bg-primary/10 border-primary/20"
+              : "bg-emerald-500/10 border-emerald-500/20"
+          }`}>
+            {isDemo ? (
+              <>
+                <p className="text-xs font-medium text-primary">Demo Mode</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">Viewing sample data</p>
+              </>
+            ) : user ? (
+              <>
+                <p className="text-xs font-medium text-emerald-600 truncate">{user.name}</p>
+                <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{user.email}</p>
+              </>
+            ) : null}
           </div>
         )}
 
@@ -112,11 +146,16 @@ export default function DashboardShell() {
             {!collapsed && <span>View My Page</span>}
           </a>
           <button
-            onClick={() => {
+            onClick={async () => {
+              // Clear both demo and auth sessions
               localStorage.removeItem("kevv-agent-slug");
               localStorage.removeItem("kevv-agent-email");
-              setAgentSlug(null);
-              navigate("/");
+              if (isAuthenticated) {
+                await logout();
+              } else {
+                setDemoSlug(null);
+                navigate("/");
+              }
             }}
             className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-destructive hover:bg-destructive/10 transition-all"
           >
