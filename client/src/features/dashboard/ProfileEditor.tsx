@@ -80,6 +80,15 @@ export default function ProfileEditor({ agentSlug }: { agentSlug: string }) {
     return <div className="p-8 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></div>;
   }
 
+  if (!profile) {
+    return (
+      <div className="p-8 text-center space-y-3">
+        <p className="text-muted-foreground">Profile data is loading from demo mode.</p>
+        <p className="text-xs text-muted-foreground">Profile editing will be available when the database is connected.</p>
+      </div>
+    );
+  }
+
   const addArea = () => {
     const trimmed = areaInput.trim();
     if (trimmed && !form.serviceAreas.includes(trimmed)) {

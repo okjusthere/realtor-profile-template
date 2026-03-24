@@ -1,11 +1,28 @@
 import { trpc } from "@/lib/trpc";
-import { BarChart3, MessageCircle, TrendingUp, Users } from "lucide-react";
+import { BarChart3, MessageCircle, TrendingUp, Users, UserCog } from "lucide-react";
+import { useLocation } from "wouter";
 
 export default function DashboardPage({ agentSlug }: { agentSlug: string }) {
   const { data: analytics, isLoading } = trpc.dashboard.getAnalytics.useQuery({ agentSlug });
   const { data: leads } = trpc.dashboard.getLeads.useQuery({ agentSlug });
+  const { data: profile } = trpc.agent.getBySlug.useQuery({ slug: agentSlug });
+  const [, navigate] = useLocation();
 
   const recentLeads = leads?.slice(0, 5) ?? [];
+
+  // Calculate profile completeness
+  const completenessChecks = profile ? [
+    !!profile.name,
+    !!profile.bio,
+    !!profile.photoUrl,
+    !!(profile.serviceAreas as string[])?.length,
+    !!(profile.testimonials as any[])?.length,
+    !!(profile.transactions as any[])?.length,
+    !!Object.keys((profile.socialLinks as Record<string, string>) || {}).length,
+  ] : [];
+  const completeness = completenessChecks.length > 0
+    ? Math.round((completenessChecks.filter(Boolean).length / completenessChecks.length) * 100)
+    : 0;
 
   return (
     <div className="space-y-8">
@@ -38,6 +55,31 @@ export default function DashboardPage({ agentSlug }: { agentSlug: string }) {
           loading={isLoading}
         />
       </div>
+
+      {/* Profile Completeness */}
+      {completeness < 100 && (
+        <div className="border border-border rounded-lg p-6 bg-card">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <UserCog className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold">Profile Completeness</span>
+            </div>
+            <span className="text-sm font-bold text-primary">{completeness}%</span>
+          </div>
+          <div className="h-2 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary rounded-full transition-all duration-500"
+              style={{ width: `${completeness}%` }}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Add a photo, transactions, testimonials, and social links to boost your profile.{" "}
+            <button onClick={() => navigate("/dashboard/profile")} className="text-primary hover:underline font-medium">
+              Complete Profile →
+            </button>
+          </p>
+        </div>
+      )}
 
       {/* Recent Leads */}
       <div className="border border-border rounded-lg overflow-hidden">

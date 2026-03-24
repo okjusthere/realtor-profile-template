@@ -4,6 +4,7 @@ import { getDb, getAgentBySlug, getAgentByEmail, createAgentProfile, updateAgent
 import { generateSlug } from "./_core/auth";
 import { agentProfiles, leads, chatSessions, agentUsage, type AgentProfile } from "../drizzle/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
+import { getDemoAgent, DEMO_LEADS, DEMO_ANALYTICS } from "../client/src/data/demoAgents";
 
 // ─── Input Schemas ──────────────────────────────────────────────────
 
@@ -167,8 +168,13 @@ export const agentRouter = router({
     .input(z.object({ slug: z.string() }))
     .query(async ({ input }) => {
       const agent = await getAgentBySlug(input.slug);
-      if (!agent) return null;
-      return toPublicProfile(agent);
+      if (agent) return toPublicProfile(agent);
+
+      // Fallback to demo agent data
+      const demo = getDemoAgent(input.slug);
+      if (demo) return demo;
+
+      return null;
     }),
 
   /**
@@ -222,7 +228,14 @@ export const dashboardRouter = router({
     .input(z.object({ agentSlug: z.string() }))  // TODO: derive from auth
     .query(async ({ input }) => {
       const db = await getDb();
-      if (!db) return [];
+      if (!db) {
+        // Return demo leads for demo agents
+        const demo = getDemoAgent(input.agentSlug);
+        if (demo) {
+          return DEMO_LEADS.filter(l => l.agentSlug === input.agentSlug || input.agentSlug === demo.slug);
+        }
+        return [];
+      }
 
       return db.select().from(leads)
         .where(eq(leads.agentSlug, input.agentSlug))
@@ -255,7 +268,12 @@ export const dashboardRouter = router({
     .input(z.object({ agentSlug: z.string() }))
     .query(async ({ input }) => {
       const db = await getDb();
-      if (!db) return { totalLeads: 0, totalConversations: 0, conversionRate: 0 };
+      if (!db) {
+        // Return demo analytics for demo agents
+        const demo = getDemoAgent(input.agentSlug);
+        if (demo) return DEMO_ANALYTICS;
+        return { totalLeads: 0, totalConversations: 0, conversionRate: 0 };
+      }
 
       const [leadResult] = await db.select({ count: sql<number>`count(*)` })
         .from(leads)

@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation, Route, Switch } from "wouter";
 import { Button } from "@/components/ui/button";
-import { BarChart3, ExternalLink, LayoutDashboard, LogOut, PanelLeft, User, Users } from "lucide-react";
+import { BarChart3, ExternalLink, LayoutDashboard, LogOut, PanelLeft, Sparkles, User, Users } from "lucide-react";
 import DashboardPage from "./DashboardPage";
 import LeadsPage from "./LeadsPage";
 import ProfileEditor from "./ProfileEditor";
@@ -12,37 +12,48 @@ const MENU_ITEMS = [
   { icon: User, label: "Profile", path: "/dashboard/profile" },
 ];
 
+const DEMO_SLUGS = ["sarah-chen", "michael-brooks"];
+
 export default function DashboardShell() {
   const [location, navigate] = useLocation();
   const [collapsed, setCollapsed] = useState(false);
 
-  // Get agent slug from localStorage (set during registration)
-  const [agentSlug, setAgentSlug] = useState<string | null>(null);
+  // Synchronous init — no useEffect flash
+  const [agentSlug, setAgentSlug] = useState<string | null>(
+    () => localStorage.getItem("kevv-agent-slug")
+  );
 
-  useEffect(() => {
-    const slug = localStorage.getItem("kevv-agent-slug");
-    setAgentSlug(slug);
-  }, []);
+  const isDemo = agentSlug ? DEMO_SLUGS.includes(agentSlug) : false;
 
-  // No agent slug — redirect to register
-  if (agentSlug === null) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-background text-foreground">
-        <h1 className="text-2xl font-heading font-bold">Loading Dashboard...</h1>
-      </div>
-    );
-  }
-
+  // No agent slug — show selector
   if (!agentSlug) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-6 bg-background text-foreground p-8">
-        <h1 className="text-3xl font-heading font-bold">No Agent Profile Found</h1>
-        <p className="text-muted-foreground text-center max-w-md">
-          Please create an agent page first to access the dashboard.
-        </p>
-        <Button onClick={() => navigate("/register")} size="lg" className="font-bold">
-          Create Agent Page
-        </Button>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-8 bg-background text-foreground p-8">
+        <div className="text-center space-y-3">
+          <h1 className="text-3xl font-heading font-bold">Agent Dashboard</h1>
+          <p className="text-muted-foreground max-w-md">
+            Create your own agent page or explore the demo dashboard to see how the platform works.
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Button onClick={() => navigate("/register")} size="lg" className="font-bold gap-2">
+            <Sparkles className="h-4 w-4" />
+            Create Agent Page
+          </Button>
+          <Button
+            variant="outline"
+            size="lg"
+            className="font-bold gap-2"
+            onClick={() => {
+              localStorage.setItem("kevv-agent-slug", "sarah-chen");
+              setAgentSlug("sarah-chen");
+            }}
+          >
+            <BarChart3 className="h-4 w-4" />
+            Try Demo Dashboard
+          </Button>
+        </div>
       </div>
     );
   }
@@ -61,8 +72,16 @@ export default function DashboardShell() {
           )}
         </div>
 
+        {/* Demo Banner */}
+        {isDemo && !collapsed && (
+          <div className="mx-2 mt-2 px-3 py-2 bg-primary/10 border border-primary/20 rounded-lg">
+            <p className="text-xs font-medium text-primary">Demo Mode</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Viewing sample data</p>
+          </div>
+        )}
+
         {/* Menu */}
-        <nav className="flex-1 p-2 space-y-1">
+        <nav className="flex-1 p-2 space-y-1 mt-1">
           {MENU_ITEMS.map((item) => {
             const isActive = location === item.path || (item.path !== "/dashboard" && location.startsWith(item.path));
             return (
@@ -96,6 +115,7 @@ export default function DashboardShell() {
             onClick={() => {
               localStorage.removeItem("kevv-agent-slug");
               localStorage.removeItem("kevv-agent-email");
+              setAgentSlug(null);
               navigate("/");
             }}
             className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-destructive hover:bg-destructive/10 transition-all"
