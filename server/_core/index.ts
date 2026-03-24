@@ -7,6 +7,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { createSEOMiddleware, createSitemapRouter } from "../seo";
+import { createOGImageRouter } from "../ogImage";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -36,6 +37,9 @@ async function startServer() {
 
   // SEO: sitemap.xml + robots.txt
   app.use(createSitemapRouter());
+
+  // OG Image: dynamic social sharing cards
+  app.use(createOGImageRouter());
 
   // SEO: inject OG/JSON-LD tags for agent pages (before HTML handler)
   app.use(createSEOMiddleware());

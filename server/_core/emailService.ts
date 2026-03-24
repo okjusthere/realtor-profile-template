@@ -151,3 +151,81 @@ export function generateLeadNotificationEmail(
     </div>
   `;
 }
+
+/**
+ * Generate auto follow-up email sent TO the lead after they share their info.
+ * This is the key conversion touchpoint — makes the agent look responsive
+ * and professional even before they manually reply.
+ */
+export function generateLeadFollowUpEmail(
+  leadName: string,
+  agentName: string,
+  agentTitle: string,
+  agentBrokerage: string,
+  agentPhone: string | null,
+  agentPhotoUrl: string | null,
+  conversationSummary: string
+): string {
+  const firstName = leadName.split(" ")[0];
+  const agentFirstName = agentName.split(" ")[0];
+
+  return `
+    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
+      <!-- Header -->
+      <div style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); padding: 30px; text-align: center;">
+        ${agentPhotoUrl 
+          ? `<img src="${escapeHtml(agentPhotoUrl)}" alt="${escapeHtml(agentName)}" style="width: 80px; height: 80px; border-radius: 50%; border: 3px solid #DAA520; object-fit: cover; margin-bottom: 12px;" />`
+          : `<div style="width: 80px; height: 80px; border-radius: 50%; background: #DAA520; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-size: 32px; color: white;">👤</div>`
+        }
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px;">${escapeHtml(agentName)}</h1>
+        <p style="color: #DAA520; margin: 4px 0 0; font-size: 14px; letter-spacing: 1px;">${escapeHtml(agentTitle)} · ${escapeHtml(agentBrokerage)}</p>
+      </div>
+
+      <!-- Body -->
+      <div style="padding: 30px;">
+        <p style="font-size: 16px; color: #333; line-height: 1.6;">
+          Hi ${escapeHtml(firstName)},
+        </p>
+        <p style="font-size: 16px; color: #333; line-height: 1.6;">
+          Thank you for reaching out! I received your information from our chat and wanted to follow up personally.
+        </p>
+        
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #DAA520;">
+          <p style="font-size: 14px; color: #666; margin: 0 0 8px; font-weight: bold;">From our conversation:</p>
+          <p style="font-size: 14px; color: #555; margin: 0; line-height: 1.5;">
+            ${escapeHtml(conversationSummary).slice(0, 300)}${conversationSummary.length > 300 ? "…" : ""}
+          </p>
+        </div>
+
+        <p style="font-size: 16px; color: #333; line-height: 1.6;">
+          I'd love to continue our conversation and help you with your real estate needs. Feel free to reach me directly:
+        </p>
+
+        <!-- Contact CTA -->
+        <div style="text-align: center; margin: 25px 0;">
+          ${agentPhone 
+            ? `<a href="tel:${escapeHtml(agentPhone)}" style="display: inline-block; background: #1a1a2e; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; letter-spacing: 0.5px;">📞 Call ${escapeHtml(agentFirstName)} — ${escapeHtml(agentPhone)}</a>`
+            : `<a href="mailto:reply" style="display: inline-block; background: #1a1a2e; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; letter-spacing: 0.5px;">💬 Reply to This Email</a>`
+          }
+        </div>
+
+        <p style="font-size: 16px; color: #333; line-height: 1.6;">
+          Looking forward to connecting!
+        </p>
+        <p style="font-size: 16px; color: #333; line-height: 1.6; margin-bottom: 0;">
+          Best,<br/>
+          <strong>${escapeHtml(agentName)}</strong><br/>
+          <span style="color: #888; font-size: 14px;">${escapeHtml(agentTitle)} · ${escapeHtml(agentBrokerage)}</span>
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div style="background-color: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #e9ecef;">
+        <p style="color: #999; font-size: 12px; margin: 0;">
+          © ${new Date().getFullYear()} ${escapeHtml(agentBrokerage)} · Powered by Kevv AI
+        </p>
+      </div>
+    </div>
+  `;
+}
+

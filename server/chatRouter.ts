@@ -5,7 +5,7 @@ import { getDb, getAgentBySlug } from "./db";
 import { invokeLLM, type Tool, type Message } from "./_core/llm";
 import { nanoid } from "nanoid";
 import { eq, asc, and, sql } from "drizzle-orm";
-import { sendEmail, generateLeadNotificationEmail } from "./_core/emailService";
+import { sendEmail, generateLeadNotificationEmail, generateLeadFollowUpEmail } from "./_core/emailService";
 import { notifyOwner } from "./_core/notification";
 import { searchProperties, formatListingsForAI, type PropertySearchParams } from "./propertyService";
 import { getDemoAgent } from "../client/src/data/demoAgents";
@@ -705,6 +705,25 @@ ${conversationHistory.map((m) => `${m.role === "user" ? "Visitor" : "AI"}: ${m.c
           subject: `${scoreEmoji} New ${leadScore.toUpperCase()} AI Chat Lead: ${input.name}`,
           html: notificationHtml,
         });
+
+        // Auto follow-up email TO the lead
+        if (agent) {
+          const followUpHtml = generateLeadFollowUpEmail(
+            input.name,
+            agent.name,
+            (agent as any).title || "Real Estate Agent",
+            (agent as any).brokerage || "Kevv Realty",
+            (agent as any).phone || null,
+            (agent as any).photoUrl || null,
+            conversationSummary
+          );
+          await sendEmail({
+            to: input.email,
+            subject: `Thanks for connecting, ${input.name.split(" ")[0]}! — ${agent.name}`,
+            html: followUpHtml,
+          });
+          console.log(`[Lead] Follow-up email sent to ${input.email}`);
+        }
       } catch (e) {
         console.warn("[Lead] Failed to send notifications:", e);
       }

@@ -45,7 +45,7 @@ function generateSEOTags(agent: AgentData, baseUrl: string): string {
     ? agent.bio.slice(0, 155) + (agent.bio.length > 155 ? "…" : "")
     : `${agent.name} is a ${agent.title || "real estate agent"} at ${agent.brokerage || ""}. ${agent.yearsExperience || 0}+ years experience serving ${areas}. Contact for a free consultation.`;
   const url = `${baseUrl}/agents/${agent.slug}`;
-  const image = agent.photoUrl || `${baseUrl}/og-default.png`;
+  const image = `${baseUrl}/api/og-image/${agent.slug}`;
 
   // ─── Open Graph Tags ───
   const ogTags = `
