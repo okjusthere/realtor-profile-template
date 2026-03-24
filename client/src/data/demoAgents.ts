@@ -27,6 +27,7 @@ export const DEMO_AGENTS: AgentProfileData[] = [
     photoUrl:
       "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=800&h=1000&fit=crop&crop=faces",
     colorScheme: "gold",
+    templateId: "luxury",
     socialLinks: {
       instagram: "https://instagram.com",
       linkedin: "https://linkedin.com",
@@ -60,7 +61,6 @@ export const DEMO_AGENTS: AgentProfileData[] = [
       },
     ],
     neighborhoodKnowledge: {},
-    templateId: "classic",
     tier: "pro",
   },
   {
