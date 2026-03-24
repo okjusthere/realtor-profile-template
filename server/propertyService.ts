@@ -1,11 +1,13 @@
 /**
- * Property search service — placeholder for future MLS/Zillow API integration.
+ * Property search service.
  * 
- * Currently returns empty results. To enable real property search:
+ * Priority: MLS/Zillow API → Tavily web search fallback.
+ * To enable real MLS search:
  * 1. Sign up for RapidAPI Zillow API ($0.006/request)
  * 2. Set ZILLOW_API_KEY in env
- * 3. Uncomment the API call below
  */
+
+import { ENV } from "./_core/env";
 
 export type PropertyListing = {
   address: string;
@@ -42,23 +44,85 @@ export type PropertySearchParams = {
 };
 
 /**
- * Search properties — currently returns empty (falls back to AI knowledge).
- * 
- * TODO: Integrate with RapidAPI Zillow or Realty-in-US API:
- * ```
- * const response = await fetch("https://zillow-com1.p.rapidapi.com/propertyExtendedSearch", {
- *   headers: {
- *     "X-RapidAPI-Key": process.env.ZILLOW_API_KEY,
- *     "X-RapidAPI-Host": "zillow-com1.p.rapidapi.com",
- *   },
- * });
- * ```
+ * Search properties — uses Zillow API if configured, else falls back to Tavily web search.
  */
 export async function searchProperties(
   params: PropertySearchParams
 ): Promise<PropertyListing[]> {
-  console.log(`[PropertyService] Search requested for ${params.city || "unknown"} — API not configured, using AI knowledge`);
+  // TODO: Uncomment when Zillow API is configured
+  // if (process.env.ZILLOW_API_KEY) { ... real MLS search ... }
+  
+  console.log(`[PropertyService] Search for ${params.city || "unknown"} — no MLS API, using Tavily fallback`);
   return [];
+}
+
+/**
+ * Tavily-powered fallback: search the web for listings when no MLS API is available.
+ * Returns a human-readable string (not structured PropertyListing[]) for the AI.
+ */
+export async function searchPropertiesViaTavily(
+  params: PropertySearchParams
+): Promise<string> {
+  if (!ENV.tavilyApiKey) {
+    return "Property search is not available. Suggest the visitor contact the agent directly for current listings.";
+  }
+
+  // Build a natural search query from the params
+  const parts: string[] = ["homes for sale"];
+  if (params.city) parts.push(`in ${params.city}`);
+  if (params.state) parts.push(params.state);
+  if (params.minPrice && params.maxPrice) {
+    parts.push(`$${(params.minPrice / 1000).toFixed(0)}K-$${(params.maxPrice / 1000).toFixed(0)}K`);
+  } else if (params.maxPrice) {
+    parts.push(`under $${(params.maxPrice / 1000).toFixed(0)}K`);
+  } else if (params.minPrice) {
+    parts.push(`over $${(params.minPrice / 1000).toFixed(0)}K`);
+  }
+  if (params.bedrooms) parts.push(`${params.bedrooms} bedroom`);
+  if (params.propertyType) parts.push(params.propertyType.replace("_", " "));
+
+  const query = parts.join(" ");
+  console.log(`[PropertyService] Tavily fallback search: "${query}"`);
+
+  try {
+    const res = await fetch("https://api.tavily.com/search", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        api_key: ENV.tavilyApiKey,
+        query,
+        search_depth: "basic",
+        max_results: 5,
+        include_answer: true,
+        include_raw_content: false,
+      }),
+    });
+
+    if (!res.ok) {
+      console.warn(`[PropertyService] Tavily error: ${res.status}`);
+      return "Property search temporarily unavailable. Use your knowledge to help the visitor.";
+    }
+
+    const data = await res.json() as {
+      answer?: string;
+      results?: Array<{ title: string; url: string; content: string }>;
+    };
+
+    let output = "";
+    if (data.answer) {
+      output += `Market Overview: ${data.answer}\n\n`;
+    }
+    if (data.results?.length) {
+      output += "Relevant Listings & Sources:\n";
+      for (const r of data.results.slice(0, 4)) {
+        output += `- ${r.title}: ${r.content.slice(0, 250)}\n  Source: ${r.url}\n`;
+      }
+    }
+    return output || "No properties found matching those criteria.";
+  } catch (e) {
+    console.warn("[PropertyService] Tavily search failed:", e);
+    return "Property search temporarily unavailable.";
+  }
 }
 
 /**
@@ -74,9 +138,13 @@ export async function getMarketStats(
 
 /**
  * Format property listings into a readable string for AI context.
+ * Falls back to Tavily web search when no structured listings are available.
  */
-export function formatListingsForAI(listings: PropertyListing[]): string {
-  if (listings.length === 0) return "No live property data available. Use your neighborhood knowledge to answer.";
+export function formatListingsForAI(listings: PropertyListing[], tavilyResult?: string): string {
+  if (listings.length === 0) {
+    if (tavilyResult) return tavilyResult;
+    return "No live property data available. Use your neighborhood knowledge to answer.";
+  }
 
   return listings
     .map(

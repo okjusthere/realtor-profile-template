@@ -10,6 +10,8 @@ import AgentAbout from "./AgentAbout";
 import AgentTransactions, { type Transaction } from "./AgentTransactions";
 import AgentTestimonials, { type Testimonial } from "./AgentTestimonials";
 import AgentContact from "./AgentContact";
+import ModernTemplate from "./templates/ModernTemplate";
+import ClassicTemplate from "./templates/ClassicTemplate";
 
 // ─── Public Agent Profile type (from tRPC response) ──────────────
 export type AgentProfileData = {
@@ -36,6 +38,13 @@ export type AgentProfileData = {
   tier?: string | null;
 };
 
+// ─── Template registry ───────────────────────────────────────────
+export const TEMPLATES = [
+  { id: "luxury",  name: "Luxury",  description: "Dark, editorial split-panel with full-bleed photo" },
+  { id: "modern",  name: "Modern",  description: "Bright, full-width hero with card-based layout" },
+  { id: "classic", name: "Classic", description: "Traditional top-down with centered portrait & warm tones" },
+] as const;
+
 type AgentPageProps = {
   /** Agent profile data — if provided, skips tRPC loading */
   profile?: AgentProfileData | null;
@@ -54,11 +63,12 @@ type AgentPageProps = {
 };
 
 /**
- * AgentPage — complete agent profile page component.
+ * AgentPage — template router for agent profile pages.
  *
- * Can be used in two modes:
- * 1. **Standalone** (in route handler): loads data from tRPC via slug
- * 2. **Preview** (in registration wizard): receives profile data as props
+ * Routes to the correct template based on agent.templateId:
+ * - "modern" → ModernTemplate (light, blue, full-width hero)
+ * - "classic" → ClassicTemplate (stone tones, serif, centered portrait)
+ * - "luxury" / default → original dark editorial layout
  */
 export default function AgentPage({
   profile,
@@ -109,7 +119,18 @@ export default function AgentPage({
     );
   }
 
-  // ── Extract typed data from JSONB fields ──
+  // ── Template routing ──
+  const templateId = agent.templateId || "luxury";
+  const templateProps = { profile: agent, slug: agentSlug, showChat, showContact, preview };
+
+  if (templateId === "modern") {
+    return <ModernTemplate {...templateProps} />;
+  }
+  if (templateId === "classic") {
+    return <ClassicTemplate {...templateProps} />;
+  }
+
+  // ── Default: Luxury Template (original dark editorial layout) ──
   const serviceAreas = (agent.serviceAreas ?? []) as string[];
   const specialties = (agent.specialties ?? []) as string[];
   const languages = (agent.languages ?? ["English"]) as string[];

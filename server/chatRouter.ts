@@ -8,7 +8,7 @@ import { nanoid } from "nanoid";
 import { eq, asc, and, sql } from "drizzle-orm";
 import { sendEmail, generateLeadNotificationEmail, generateLeadFollowUpEmail } from "./_core/emailService";
 import { notifyOwner } from "./_core/notification";
-import { searchProperties, formatListingsForAI, type PropertySearchParams } from "./propertyService";
+import { searchProperties, searchPropertiesViaTavily, formatListingsForAI, type PropertySearchParams } from "./propertyService";
 import { getDemoAgent } from "../client/src/data/demoAgents";
 
 // ─── Constants ──────────────────────────────────────────────────
@@ -529,10 +529,15 @@ export const chatRouter = router({
 
               if (tc.function.name === "search_properties") {
                 const listings = await searchProperties(args as PropertySearchParams);
-                const formatted = formatListingsForAI(listings);
+                // Fallback to Tavily web search when no MLS API
+                let tavilyResult: string | undefined;
+                if (listings.length === 0) {
+                  tavilyResult = await searchPropertiesViaTavily(args as PropertySearchParams);
+                }
+                const formatted = formatListingsForAI(listings, tavilyResult);
                 toolMessages.push({
                   role: "tool",
-                  content: formatted || "No properties found matching those criteria. The property search service may be temporarily unavailable.",
+                  content: formatted || "No properties found matching those criteria.",
                   tool_call_id: tc.id,
                 });
               }
