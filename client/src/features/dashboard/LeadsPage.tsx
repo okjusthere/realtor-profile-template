@@ -1,7 +1,9 @@
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
-import { ChevronDown, Mail, Phone, Search } from "lucide-react";
+import { ChevronDown, DollarSign, Eye, Mail, MapPin, Phone, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import ConversationModal from "./ConversationModal";
+import { DEMO_CONVERSATIONS } from "@/data/demoAgents";
 
 const STATUS_OPTIONS = ["new", "contacted", "qualified", "converted", "lost"] as const;
 
@@ -15,6 +17,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function LeadsPage({ agentSlug }: { agentSlug: string }) {
   const [search, setSearch] = useState("");
+  const [selectedLead, setSelectedLead] = useState<any | null>(null);
   const utils = trpc.useUtils();
   const { data: leads = [], isLoading } = trpc.dashboard.getLeads.useQuery({ agentSlug });
   const updateStatus = trpc.dashboard.updateLeadStatus.useMutation({
@@ -67,10 +70,10 @@ export default function LeadsPage({ agentSlug }: { agentSlug: string }) {
                   <th className="text-left py-3 px-4 font-semibold">Name</th>
                   <th className="text-left py-3 px-4 font-semibold">Contact</th>
                   <th className="text-left py-3 px-4 font-semibold">Score</th>
-                  <th className="text-left py-3 px-4 font-semibold">Intent</th>
-                  <th className="text-left py-3 px-4 font-semibold">Area</th>
+                  <th className="text-left py-3 px-4 font-semibold">Details</th>
                   <th className="text-left py-3 px-4 font-semibold">Status</th>
                   <th className="text-left py-3 px-4 font-semibold">Date</th>
+                  <th className="text-left py-3 px-4 font-semibold"></th>
                 </tr>
               </thead>
               <tbody>
@@ -98,11 +101,27 @@ export default function LeadsPage({ agentSlug }: { agentSlug: string }) {
                         {lead.leadScore?.toUpperCase() ?? "—"}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-muted-foreground capitalize text-xs">
-                      {lead.extractedIntent || "—"}
-                    </td>
-                    <td className="py-3 px-4 text-muted-foreground text-xs">
-                      {lead.extractedArea || "—"}
+                    {/* Intent + Budget + Area as compact badges */}
+                    <td className="py-3 px-4">
+                      <div className="flex flex-wrap gap-1">
+                        {lead.extractedIntent && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary/5 text-xs text-primary font-medium capitalize">
+                            {lead.extractedIntent}
+                          </span>
+                        )}
+                        {lead.extractedBudget && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-green-500/5 text-xs text-green-600 font-medium">
+                            <DollarSign className="h-3 w-3" />
+                            {lead.extractedBudget}
+                          </span>
+                        )}
+                        {lead.extractedArea && (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/5 text-xs text-blue-600 font-medium">
+                            <MapPin className="h-3 w-3" />
+                            {lead.extractedArea}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3 px-4">
                       <select
@@ -121,6 +140,15 @@ export default function LeadsPage({ agentSlug }: { agentSlug: string }) {
                     <td className="py-3 px-4 text-xs text-muted-foreground whitespace-nowrap">
                       {lead.createdAt ? new Date(lead.createdAt).toLocaleDateString() : "—"}
                     </td>
+                    <td className="py-3 px-4">
+                      <button
+                        onClick={() => setSelectedLead(lead)}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        View
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -128,6 +156,15 @@ export default function LeadsPage({ agentSlug }: { agentSlug: string }) {
           </div>
         )}
       </div>
+
+      {/* Conversation Modal */}
+      {selectedLead && (
+        <ConversationModal
+          lead={selectedLead}
+          chatMessages={selectedLead.sessionId ? DEMO_CONVERSATIONS[selectedLead.sessionId] : undefined}
+          onClose={() => setSelectedLead(null)}
+        />
+      )}
     </div>
   );
 }

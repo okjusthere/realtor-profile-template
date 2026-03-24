@@ -233,6 +233,34 @@ export const DEMO_LEADS = [
   },
 ];
 
+/** Mock chat transcripts for demo conversation view */
+export const DEMO_CONVERSATIONS: Record<string, Array<{ role: string; content: string }>> = {
+  "demo-session-1": [
+    { role: "user", content: "Hi, I'm looking for a 3-bedroom home near good schools in Palo Alto. What's available?" },
+    { role: "assistant", content: "Great question! Palo Alto has excellent school options — Gunn and Paly are both top-rated. Right now, the median price for a 3BR in the area is around $3.2M, but there are some options in the $2.8M–$3.2M range.\n\nAre you looking to move soon, or just starting your search?" },
+    { role: "user", content: "We're hoping to move within 3 months. We have two kids starting school in fall." },
+    { role: "assistant", content: "That's a great timeline — you'll have some good options before the summer rush. For families, I'd recommend looking at the Duveneck/St. Francis or Old Palo Alto neighborhoods. They're walkable to both Addison and Duveneck elementary schools.\n\nWould you like me to connect you with Sarah Chen? She specializes in family relocations in Palo Alto and just helped another family find a home near Gunn." },
+    { role: "user", content: "Yes, that would be great! Our budget is around $3 million." },
+    { role: "assistant", content: "Perfect! I'll pass your details along to Sarah. She'll reach out within 24 hours with some curated listings in the $2.8M–$3.2M range near top schools. In the meantime, feel free to ask me anything else about the Palo Alto market! 🏡" },
+  ],
+  "demo-session-3": [
+    { role: "user", content: "I'm relocating from NYC to the Bay Area. Looking for luxury homes in Atherton." },
+    { role: "assistant", content: "Welcome to the Bay Area! Atherton is consistently ranked one of the most exclusive zip codes in the country — beautiful tree-lined estates, incredible privacy, and excellent proximity to both Stanford and Sand Hill Road.\n\nJust out of curiosity, what's driving the move? Work relocation, or looking for a change of pace?" },
+    { role: "user", content: "New role at a tech company. Budget is $5M+. Need something move-in ready." },
+    { role: "assistant", content: "At $5M+, you'll have excellent options in Atherton. Move-in ready estates in that range typically feature 4-6 bedrooms, resort-style grounds, and often a pool.\n\nSarah Chen actually just closed a $6.2M deal in Atherton last month — she knows the inventory intimately. Would you like her to set up a private tour? She can fly out to meet you in NYC if that's easier for the initial consult." },
+    { role: "user", content: "That sounds perfect. When is she available?" },
+    { role: "assistant", content: "I'll have Sarah reach out today with her availability. She typically does virtual walkthrough tours first, then in-person tours when you visit. She'll also send you a curated shortlist of the best move-in ready properties currently on and off-market in Atherton. 🏠✨" },
+  ],
+  "demo-session-5": [
+    { role: "user", content: "I'm a professor at Stanford looking for a home nearby. What's available in Menlo Park?" },
+    { role: "assistant", content: "Great choice! Menlo Park is very popular with Stanford faculty — it's a short commute and has a wonderful downtown. The market there ranges from $2M–$5M+ depending on the neighborhood.\n\nAre you looking to buy, or would you prefer to rent first?" },
+    { role: "user", content: "Buy. I'm pre-approved for $2.5M. Need at least 3 bedrooms." },
+    { role: "assistant", content: "At $2.5M with pre-approval, you're in a strong position for Menlo Park. I'd recommend looking at the Felton Gables or Sharon Heights neighborhoods — both are within 10 minutes of campus and have great 3-4BR options.\n\nSarah Chen has helped several Stanford faculty members find homes in this area. Would you like her to send you some listings?" },
+    { role: "user", content: "Yes please, the sooner the better. I start next month." },
+    { role: "assistant", content: "I'll make sure Sarah prioritizes your search — with a 1-month timeline, she can focus on properties ready for quick close. She'll reach out today with a personalized list. Congratulations on the new position at Stanford! 🎓" },
+  ],
+};
+
 /** Mock analytics for demo dashboard */
 export const DEMO_ANALYTICS = {
   totalLeads: 6,

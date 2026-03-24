@@ -26,24 +26,53 @@ type LeadFormData = {
   phone: string;
 };
 
-// ─── Engagement: Teaser messages rotate every few seconds ────────
-// These are functions that take agentName so they work for any agent
-function getTeaserMessagesEn(name: string) {
-  return [
-    `👋 Hi! ${name} is available — ask me anything!`,
-    "💬 I can answer your real estate questions 24/7",
-    "🏠 Looking for your dream home? Let's chat!",
-    "📊 Get instant market insights — try me!",
+// ─── Section-Aware Teaser Messages ────────────────────────────
+type PageSection = "hero" | "about" | "transactions" | "testimonials" | "contact" | "default";
+
+function detectPageSection(): PageSection {
+  const scrollY = window.scrollY;
+  const vh = window.innerHeight;
+  const sections: Array<{ id: string; section: PageSection }> = [
+    { id: "hero", section: "hero" },
+    { id: "about", section: "about" },
+    { id: "transactions", section: "transactions" },
+    { id: "testimonials", section: "testimonials" },
+    { id: "contact", section: "contact" },
   ];
+  for (const { id, section } of sections.reverse()) {
+    const el = document.getElementById(id);
+    if (el && scrollY >= el.offsetTop - vh * 0.5) return section;
+  }
+  const pct = scrollY / (document.body.scrollHeight - vh);
+  if (pct > 0.7) return "contact";
+  if (pct > 0.5) return "testimonials";
+  if (pct > 0.3) return "transactions";
+  if (pct > 0.1) return "about";
+  return "hero";
 }
 
-function getTeaserMessagesZh(name: string) {
-  return [
-    `👋 你好！我是 ${name} 的 AI 助手`,
-    "💬 有任何房产问题都可以问我",
-    "🏠 我可以帮你找到理想的家",
-    "📊 获取实时市场分析 — 试试看！",
-  ];
+function getSectionTeaserEn(name: string, section: PageSection): string {
+  const map: Record<PageSection, string> = {
+    hero: "👋 Hi! " + name + " is available — ask me anything!",
+    about: "💬 Curious about " + name + "'s experience? I can tell you more!",
+    transactions: "🏠 Want to see properties like these? I can search for you!",
+    testimonials: "⭐ Ready to get the same results? Let's chat!",
+    contact: "📞 Skip the form — chat with me instantly!",
+    default: "💬 I can answer your real estate questions 24/7",
+  };
+  return map[section];
+}
+
+function getSectionTeaserZh(name: string, section: PageSection): string {
+  const map: Record<PageSection, string> = {
+    hero: "👋 你好！" + name + " 在线 — 随时可以聊！",
+    about: "💬 想了解 " + name + " 的更多经验？问我就好！",
+    transactions: "🏠 想看类似的房源？我可以帮你搜索！",
+    testimonials: "⭐ 想获得同样的结果？来聊聊吧！",
+    contact: "📞 不用填表 — 直接跟我聊更快！",
+    default: "💬 有任何房产问题都可以问我",
+  };
+  return map[section];
 }
 
 const SUGGESTED_PROMPTS_EN = [
@@ -96,6 +125,7 @@ export default function FloatingChat({
   const [teaserIndex, setTeaserIndex] = useState(0);
   const [hasScrolledPast, setHasScrolledPast] = useState(false);
   const [wasEverOpened, setWasEverOpened] = useState(false);
+  const [currentSection, setCurrentSection] = useState<PageSection>("hero");
 
   // Simple CJK detection for UI language adaptation
   const detectLang = (text: string): "en" | "zh" => {
@@ -150,22 +180,19 @@ export default function FloatingChat({
 
     const showTimer = setTimeout(() => {
       setShowTeaser(true);
-    }, 6000);
+    }, 3000);
 
     return () => clearTimeout(showTimer);
   }, [isOpen, teaserDismissed, wasEverOpened]);
 
-  // Rotate teaser messages every 4 seconds
+  // Update section-aware teaser when visible
   useEffect(() => {
-    if (!showTeaser) return;
-    const interval = setInterval(() => {
-      setTeaserIndex((prev) => {
-        const msgs = detectedLang === "zh" ? getTeaserMessagesZh(agentName) : getTeaserMessagesEn(agentName);
-        return (prev + 1) % msgs.length;
-      });
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [showTeaser, detectedLang]);
+    if (!showTeaser || isOpen) return;
+    const updateSection = () => setCurrentSection(detectPageSection());
+    updateSection();
+    window.addEventListener("scroll", updateSection, { passive: true });
+    return () => window.removeEventListener("scroll", updateSection);
+  }, [showTeaser, isOpen]);
 
   // ─── Scroll Trigger: show teaser when user scrolls past hero ──
   useEffect(() => {
@@ -286,8 +313,9 @@ export default function FloatingChat({
     }
   };
 
-  const teaserMessages = detectedLang === "zh" ? getTeaserMessagesZh(agentName) : getTeaserMessagesEn(agentName);
-  const currentTeaser = teaserMessages[teaserIndex % teaserMessages.length];
+  const currentTeaser = detectedLang === "zh"
+    ? getSectionTeaserZh(agentName, currentSection)
+    : getSectionTeaserEn(agentName, currentSection);
 
   return (
     <>
@@ -569,14 +597,26 @@ export default function FloatingChat({
                     </div>
                   )}
 
-                  {/* Lead captured confirmation */}
+                  {/* Lead captured confirmation + social proof */}
                   {leadCaptured && (
-                    <div className="my-2 p-3 rounded-xl bg-green-500/10 border border-green-500/30 text-center animate-in fade-in duration-300">
-                      <p className="text-sm font-semibold text-green-700 dark:text-green-400">
-                        {detectedLang === "zh"
-                          ? `✅ ${agentName} 会尽快联系您！`
-                          : `✅ ${agentName} will reach out to you soon!`}
-                      </p>
+                    <div className="my-2 space-y-2 animate-in fade-in duration-300">
+                      <div className="p-3 rounded-xl bg-green-500/10 border border-green-500/30 text-center">
+                        <p className="text-sm font-semibold text-green-700 dark:text-green-400">
+                          {detectedLang === "zh"
+                            ? `✅ ${agentName} 会尽快联系您！`
+                            : `✅ ${agentName} will reach out to you soon!`}
+                        </p>
+                      </div>
+                      <div className="p-3 rounded-xl bg-primary/5 border border-primary/10">
+                        <p className="text-xs italic text-muted-foreground">
+                          {detectedLang === "zh"
+                            ? `"${agentName} 帮我们找到了完美的家，整个过程非常顺利！" — 近期客户`
+                            : `"${agentName} helped us find our perfect home — the entire process was seamless!" — Recent client`}
+                        </p>
+                        <p className="text-[10px] text-primary font-medium mt-1.5">
+                          ⭐⭐⭐⭐⭐
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>
