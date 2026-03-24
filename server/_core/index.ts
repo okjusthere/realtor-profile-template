@@ -9,6 +9,7 @@ import { serveStatic, setupVite } from "./vite";
 import { createSEOMiddleware, createSitemapRouter } from "../seo";
 import { createOGImageRouter } from "../ogImage";
 import { createAuthRouter } from "../authRoutes";
+import { createStripeRouter } from "../stripeRoutes";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -32,9 +33,15 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
+  // Stripe webhook needs raw body — must be BEFORE json() parser
+  app.post("/api/stripe/webhook", express.raw({ type: "application/json" }));
+
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+  // Stripe: checkout, webhook handler, portal, status
+  app.use(createStripeRouter());
 
   // Auth: Google OAuth routes (/auth/google, /auth/google/callback, /auth/me, /auth/logout)
   app.use(createAuthRouter());

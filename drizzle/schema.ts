@@ -71,6 +71,12 @@ export const agentProfiles = pgTable("agent_profiles", {
   oauthId: varchar("oauth_id", { length: 128 }),             // external OAuth user ID
   passwordHash: varchar("password_hash", { length: 255 }),   // temp fallback
 
+  // Stripe billing
+  stripeCustomerId: varchar("stripe_customer_id", { length: 128 }),
+  stripeSubscriptionId: varchar("stripe_subscription_id", { length: 128 }),
+  subscriptionStatus: varchar("subscription_status", { length: 32 }),  // "active" | "canceled" | "past_due" | null
+  currentPeriodEnd: timestamp("current_period_end"),
+
   // System
   status: profileStatusEnum("status").default("active"),
   tier: tierEnum("tier").default("free"),

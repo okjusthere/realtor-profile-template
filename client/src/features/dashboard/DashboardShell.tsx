@@ -1,16 +1,18 @@
 import { useState } from "react";
 import { useLocation, Route, Switch } from "wouter";
 import { Button } from "@/components/ui/button";
-import { BarChart3, ExternalLink, LayoutDashboard, LogOut, PanelLeft, Sparkles, User, Users } from "lucide-react";
+import { BarChart3, CreditCard, ExternalLink, LayoutDashboard, LogOut, PanelLeft, Sparkles, User, Users } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import DashboardPage from "./DashboardPage";
 import LeadsPage from "./LeadsPage";
 import ProfileEditor from "./ProfileEditor";
+import BillingPage from "../billing/BillingPage";
 
 const MENU_ITEMS = [
   { icon: LayoutDashboard, label: "Overview", path: "/dashboard" },
   { icon: Users, label: "Leads", path: "/dashboard/leads" },
   { icon: User, label: "Profile", path: "/dashboard/profile" },
+  { icon: CreditCard, label: "Billing", path: "/dashboard/billing" },
 ];
 
 const DEMO_SLUGS = ["sarah-chen", "michael-brooks"];
@@ -171,6 +173,7 @@ export default function DashboardShell() {
           <Route path="/dashboard" component={() => <DashboardPage agentSlug={agentSlug} />} />
           <Route path="/dashboard/leads" component={() => <LeadsPage agentSlug={agentSlug} />} />
           <Route path="/dashboard/profile" component={() => <ProfileEditor agentSlug={agentSlug} />} />
+          <Route path="/dashboard/billing" component={() => <BillingPage />} />
         </Switch>
       </main>
     </div>
