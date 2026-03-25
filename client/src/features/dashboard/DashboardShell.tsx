@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, Route, Switch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { BarChart3, CreditCard, ExternalLink, LayoutDashboard, LogOut, PanelLeft, Sparkles, User, Users } from "lucide-react";
@@ -30,6 +30,14 @@ export default function DashboardShell() {
   // Determine which agent slug to use
   const agentSlug = user?.slug || demoSlug;
   const isDemo = agentSlug ? DEMO_SLUGS.includes(agentSlug) : false;
+
+  // Auto-enter demo mode when not authenticated and no slug available
+  useEffect(() => {
+    if (!isLoading && !user && !demoSlug) {
+      localStorage.setItem("kevv-agent-slug", "sarah-chen");
+      setDemoSlug("sarah-chen");
+    }
+  }, [isLoading, user, demoSlug]);
 
   // Loading state
   if (isLoading) {
